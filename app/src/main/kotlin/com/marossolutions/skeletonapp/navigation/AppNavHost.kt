@@ -33,7 +33,7 @@ fun AppNavHost(
     NavHost(
         navController = navController,
         modifier = Modifier.padding(innerPadding),
-        startDestination = ScreenWelcome
+        startDestination = ScreenSplash
     ) {
         composable<ScreenSplash> {
             SplashScreen()
@@ -63,7 +63,7 @@ fun AppNavHost(
                     }
 
                     NavigationEvent.NavigateUp -> {
-                        if (!navController.popBackStack()) {
+                        if (!navController.navigateUp()) {
                             activity.finish()
                         }
                     }

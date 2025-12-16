@@ -6,26 +6,28 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.marossolutions.skeletonapp.navigation.AppNavHost
-import com.marossolutions.skeletonapp.navigation.SimpleNavigator
-import com.marossolutions.skeletonapp.navigation.screens.ScreenAirportDetail
-import com.marossolutions.skeletonapp.navigation.screens.ScreenHome
-import com.marossolutions.skeletonapp.navigation.screens.ScreenSplash
-import com.marossolutions.skeletonapp.navigation.screens.ScreenWelcome
-import com.marossolutions.skeletonapp.ui.detail.AirportDetailScreen
-import com.marossolutions.skeletonapp.ui.home.HomeScreen
-import com.marossolutions.skeletonapp.ui.splash.SplashScreen
-
-import com.marossolutions.skeletonapp.ui.splash.SplashScreenInitializer
-import com.marossolutions.skeletonapp.ui.theme.SkeletonAppTheme
-import com.marossolutions.skeletonapp.ui.welcome.WelcomeScreen
+import androidx.compose.ui.res.stringResource
+import com.marossolutions.navigation.navigator.Navigator
+import com.marossolutions.navigation.rememberNavigationState
+import com.marossolutions.navigation.screen.AppScreen
+import com.marossolutions.navigation.screen.ScreenWelcome
+import com.marossolutions.skeletonapp.navigation.NavigationRoot
+import com.marossolutions.ui.theme.SkeletonAppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -33,30 +35,61 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject
-    lateinit var splashScreenInitializer: SplashScreenInitializer
+    lateinit var navigator: Navigator
 
-    @Inject
-    lateinit var simpleNavigator: SimpleNavigator
-
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splashScreen = installSplashScreen()
-
         super.onCreate(savedInstanceState)
-
-        splashScreen.setKeepOnScreenCondition(splashScreenInitializer)
-
         enableEdgeToEdge()
         setContent {
+            val navigationState = rememberNavigationState(ScreenWelcome)
+            LaunchedEffect(Unit) {
+                navigator.setNavigationState(navigationState)
+            }
+
             SkeletonAppTheme {
                 Scaffold(
-                    modifier = Modifier.fillMaxSize()
+                    topBar = {
+                        TopAppBar(
+                            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                titleContentColor = MaterialTheme.colorScheme.primary,
+                            ),
+                            title = {
+                                val titleId by remember {
+                                    derivedStateOf {
+                                        (navigationState.currentNavKey as? AppScreen)?.titleId
+                                    }
+                                }
+                                titleId?.let {
+                                    Text(stringResource(it))
+                                }
+                            },
+                            navigationIcon = {
+                                val showBackButton by remember {
+                                    derivedStateOf {
+                                        navigationState.backStackSize > 1
+                                    }
+                                }
+
+                                if (showBackButton) {
+                                    IconButton(onClick = { navigator.navigateUp() }) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = null
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    },
                 ) { innerPadding ->
-                    val navController: NavHostController = rememberNavController()
-                    AppNavHost(
-                        activity = this,
-                        simpleNavigator = simpleNavigator,
-                        innerPadding = innerPadding,
-                        navController = navController
+                    NavigationRoot(
+                        backStack = navigationState.backStack,
+                        onBackPress = { navigator.navigateUp() },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
                     )
                 }
             }
